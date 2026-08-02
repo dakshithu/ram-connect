@@ -14,7 +14,6 @@ Pool memory across your devices over the LAN — Windows, Linux, and macOS.
 
 ---
 
-
 ## 📖 Overview
 
 RamConnect lets one device (the **Contributor**) share a portion of its RAM over the network with another device (the **Organizer**), which mounts it as usable swap. Think of it as **network-attached memory** — turning idle RAM on your other machines into extra headroom for the device that needs it.
@@ -79,7 +78,8 @@ Both Windows Firewall and Linux firewalls (`ufw`, `firewalld`, `iptables`) must 
 | TCP | `9190` | Local node web dashboard & HTTP status |
 
 > **💡 Network Recommendation:** Use 1 Gbps+ Wired Ethernet or 5 GHz / Wi-Fi 6 for low-latency RAM streaming across nodes.
-> **Note:** You can change the ports if you want as well!
+>
+> **Note:** You can change the default ports if you want as well!
 
 ---
 
@@ -98,13 +98,58 @@ Both Windows Firewall and Linux firewalls (`ufw`, `firewalld`, `iptables`) must 
 
 ## 🚀 Getting Started
 
-> _Add your installation and quick-start instructions here — e.g. download links, CLI setup, or how to launch an Organizer vs. Contributor node._
+### Organizer Node
+
+- Run with default web port (`8080`):
+
+  ```bash
+  cargo run --bin organizer
+  ```
+
+- Run with a custom web port (e.g. `8085`):
+
+  ```bash
+  cargo run --bin organizer -- 8085
+  ```
+
+- Run with release optimizations (recommended for performance):
+
+  ```bash
+  cargo run --release --bin organizer
+  ```
+
+### Contributor Node
+
+- Run with default ports (`TCP: 9000`, `Web: 9190`):
+
+  ```bash
+  cargo run --bin contributor
+  ```
+
+- Run with custom TCP & Web ports (e.g. `TCP: 9001`, `Web: 9191`):
+
+  ```bash
+  cargo run --bin contributor -- 9001 9191
+  ```
+
+- Run with release optimizations:
+
+  ```bash
+  cargo run --release --bin contributor
+  ```
+
+### Building Standalone Binaries
+
+If you just want to compile the standalone binary files:
 
 ```bash
-# Example placeholder
-ramconnect --mode organizer
-ramconnect --mode contributor --share 4G
+cargo build --release --bins
 ```
+
+The compiled binaries will be located at:
+
+- **Windows:** `target\release\organizer.exe` and `target\release\contributor.exe`
+- **Linux:** `target/release/organizer` and `target/release/contributor`
 
 ---
 
