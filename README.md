@@ -79,6 +79,7 @@ Both Windows Firewall and Linux firewalls (`ufw`, `firewalld`, `iptables`) must 
 | TCP | `9190` | Local node web dashboard & HTTP status |
 
 > **💡 Network Recommendation:** Use 1 Gbps+ Wired Ethernet or 5 GHz / Wi-Fi 6 for low-latency RAM streaming across nodes.
+> **Note:** You can change the ports if you want as well!
 
 ---
 
