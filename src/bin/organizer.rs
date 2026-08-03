@@ -835,8 +835,17 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
             }
         }
 
-        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
-        format!("⚡ Opening Finder WebDAV mount at {} (Target: /Volumes/RAMConnect)", dav_url)
+        let osa_res = std::process::Command::new("osascript")
+            .args(["-e", &format!("mount volume \"{}\"", dav_url)])
+            .output();
+
+        if let Ok(o) = osa_res {
+            if o.status.success() {
+                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
+            }
+        }
+
+        format!("⚡ WebDAV Mount endpoint ready at {}", dav_url)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
