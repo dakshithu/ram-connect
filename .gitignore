@@ -1,0 +1,11 @@
+/target
+/dist
+*.exe
+*.zip
+*.tar.gz
+*.deb
+*.dmg
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
