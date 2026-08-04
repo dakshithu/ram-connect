@@ -235,11 +235,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state_sig = state.clone();
     tokio::spawn(async move {
         let _ = tokio::signal::ctrl_c().await;
+        #[cfg(target_os = "macos")]
+        {
+            println!("\n[SHUTDOWN] Unmounting RAM Drive from /Volumes/RAMConnect...");
+            let _ = std::process::Command::new("umount").args(["-f", "/Volumes/RAMConnect"]).output();
+            let _ = std::process::Command::new("diskutil").args(["unmount", "force", "/Volumes/RAMConnect"]).output();
+        }
         if *state_sig.is_swap_active.lock().unwrap() {
-            #[cfg(target_os = "macos")]
-            {
-                let _ = std::process::Command::new("umount").arg("/Volumes/RAMConnect").output();
-            }
             #[cfg(not(any(target_os = "windows", target_os = "macos")))]
             {
                 let _ = std::process::Command::new("swapoff").arg("/var/ramconnect/ram_swap.img").output();
@@ -247,6 +249,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         std::process::exit(0);
+    });
+
+    let state_auto = state.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(600)).await;
+        let msg = auto_mount_system_drive(&state_auto);
+        println!("[AUTO-MOUNT] {}", msg);
     });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], web_port));
