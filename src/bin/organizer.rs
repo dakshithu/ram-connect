@@ -995,13 +995,42 @@ async fn handle_webdav(
         "OPTIONS" => {
             let mut headers = HeaderMap::new();
             headers.insert("DAV", "1, 2".parse().unwrap());
-            headers.insert("Allow", "OPTIONS, GET, HEAD, POST, PUT, DELETE, PROPFIND, MKCOL, COPY, MOVE, LOCK, UNLOCK".parse().unwrap());
+            headers.insert("Allow", "OPTIONS, GET, HEAD, POST, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, COPY, MOVE, LOCK, UNLOCK".parse().unwrap());
             headers.insert("MS-Author-Via", "DAV".parse().unwrap());
             (StatusCode::OK, headers, "").into_response()
         }
         "PROPFIND" => {
             let depth = req.headers().get("depth").and_then(|h| h.to_str().ok()).unwrap_or("1");
             let files = state.files.lock().unwrap();
+
+            if !filename.is_empty() {
+                let mesh_file = files.values().find(|f| f.name == filename || f.id == filename);
+                if let Some(f) = mesh_file {
+                    let mut xml = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
+                    xml.push_str("  <D:response>\n");
+                    xml.push_str(&format!("    <D:href>/dav/{}</D:href>\n", urlencoding(&f.name)));
+                    xml.push_str("    <D:propstat>\n");
+                    xml.push_str("      <D:prop>\n");
+                    xml.push_str("        <D:resourcetype/>\n");
+                    xml.push_str(&format!("        <D:displayname>{}</D:displayname>\n", f.name));
+                    xml.push_str(&format!("        <D:getcontentlength>{}</D:getcontentlength>\n", f.size_bytes));
+                    xml.push_str(&format!("        <D:getcontenttype>{}</D:getcontenttype>\n", guess_mime(&f.name)));
+                    xml.push_str("      </D:prop>\n");
+                    xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
+                    xml.push_str("    </D:propstat>\n");
+                    xml.push_str("  </D:response>\n");
+                    xml.push_str("</D:multistatus>");
+
+                    let mut headers = HeaderMap::new();
+                    headers.insert(header::CONTENT_TYPE, "application/xml; charset=utf-8".parse().unwrap());
+                    headers.insert("DAV", "1, 2".parse().unwrap());
+                    headers.insert("MS-Author-Via", "DAV".parse().unwrap());
+                    return (StatusCode::MULTI_STATUS, headers, xml).into_response();
+                } else {
+                    return (StatusCode::NOT_FOUND, "File not found").into_response();
+                }
+            }
+
             let mut xml = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
             
             xml.push_str("  <D:response>\n");
@@ -1126,6 +1155,15 @@ async fn handle_webdav(
             (StatusCode::NO_CONTENT, "").into_response()
         }
         "MKCOL" => {
+            (StatusCode::CREATED, "").into_response()
+        }
+        "PROPPATCH" => {
+            let xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\"><D:response><D:href>/dav/</D:href><D:propstat><D:prop/><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>";
+            let mut headers = HeaderMap::new();
+            headers.insert("Content-Type", "application/xml; charset=utf-8".parse().unwrap());
+            (StatusCode::MULTI_STATUS, headers, xml).into_response()
+        }
+        "MOVE" => {
             (StatusCode::CREATED, "").into_response()
         }
         _ => {
