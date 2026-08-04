@@ -189,9 +189,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         is_swap_active: Arc::new(Mutex::new(false)),
     };
 
-    // Auto-mount Physical System RAM Drive & spawn RAM Watcher
-    let mount_status_msg = auto_mount_system_drive(&state);
-    println!("   - Host OS RAM Integration: {}", mount_status_msg);
+    // Spawn RAM Watcher
     spawn_ram_mount_watcher(state.clone());
 
     // Spawn UDP Broadcast Discovery Beacon
@@ -253,9 +251,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state_auto = state.clone();
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(600)).await;
+        tokio::time::sleep(Duration::from_millis(1000)).await;
         let msg = auto_mount_system_drive(&state_auto);
-        println!("[AUTO-MOUNT] {}", msg);
+        println!("   - Host OS RAM Integration: {}", msg);
     });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], web_port));
