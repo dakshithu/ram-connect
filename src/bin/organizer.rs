@@ -838,14 +838,16 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_http_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_guest_url = format!("http://guest:guest@127.0.0.1:{}/dav", web_port);
         let _ = std::fs::create_dir_all(&mount_path);
         let mount_str = mount_path.to_string_lossy().to_string();
 
         let _ = std::process::Command::new("pkill").arg("-9").arg("NetAuthAgent").output();
 
         let mount_res = std::process::Command::new("mount_webdav")
-            .args(["-i", &dav_http_url, &mount_str])
+            .stdin(std::process::Stdio::null())
+            .args(["-i", &dav_guest_url, &mount_str])
             .output();
 
         if let Ok(o) = mount_res {
@@ -855,8 +857,19 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
             }
         }
 
-        let _ = std::process::Command::new("open").arg(&dav_http_url).spawn();
-        format!("⚡ Opened WebDAV Connection at {}", dav_http_url)
+        let osa_res = std::process::Command::new("osascript")
+            .stdin(std::process::Stdio::null())
+            .args(["-e", &format!("mount volume \"{}\" as anonymous", dav_url)])
+            .output();
+
+        if let Ok(o) = osa_res {
+            if o.status.success() {
+                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
+            }
+        }
+
+        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+        format!("⚡ Opened WebDAV Connection at {}", dav_url)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]

@@ -27,7 +27,7 @@ RamConnect lets one device (the **Contributor**) share a portion of its RAM over
 - ⚡ Low-latency RAM streaming over LAN
 - 🖥️ Web dashboard for monitoring nodes
 - 🔌 Simple Organizer / Contributor node model
-- 🛠️ Native swap and drive integration (tmpfs on Linux, WebDAV on Windows/macOS)
+- 🛠️ Native swap and drive integration (`tmpfs` on Linux, WebDAV on Windows/macOS)
 
 ---
 
@@ -50,7 +50,7 @@ RamConnect lets one device (the **Contributor**) share a portion of its RAM over
 |---|---|
 | **Supported OS** | Windows 10, Windows 11, Windows Server 2016+ (64-bit `x86_64`) |
 | **Permissions** | Standard user privileges for portable binary execution (`organizer.exe`, `contributor.exe`). Administrator rights required only for Windows Firewall rules or system pagefile configuration. |
-| **System Utilities & Services** | • Windows WebClient Service (`sc start WebClient` or `net start WebClient`) and `net use` command for mounting WebDAV mesh storage.<br>• PowerShell or Command Prompt (`cmd.exe`).<br>• `wmic` or PowerShell (required if using the RAM mesh as Windows Virtual Swap `R:\pagefile.sys`). |
+| **System Utilities & Services** | • Windows WebClient Service (`sc start WebClient` or `net start WebClient`) and `net use` command for mounting WebDAV mesh storage.<br>• PowerShell or Command Prompt (`cmd.exe`).<br>• PowerShell (required if using the RAM mesh as Windows Virtual Swap `R:\pagefile.sys`). |
 | **Default Storage Mount** | Mapped Virtual System Drive `R:\` (via `\\127.0.0.1@<port>\dav` or `http://127.0.0.1:<port>/dav`) |
 
 ### 🐧 Linux
@@ -97,70 +97,176 @@ Both host firewalls (Windows Firewall, Linux `ufw`/`iptables`, macOS Firewall) m
 
 ---
 
-## 🚀 4. Getting Started
+## 🛠️ 4. Building from Source
 
-### Running the Organizer Node
+Ensure you have Rust installed (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` or via standard package manager).
 
-- **Default Web Port (`8080`):**
-  ```bash
-  cargo run --bin organizer
-  ```
-- **Custom Web Port (e.g. `8085`):**
-  ```bash
-  cargo run --bin organizer -- 8085
-  ```
-- **Release Mode (Recommended for performance):**
-  ```bash
-  cargo run --release --bin organizer
-  ```
+### Quick Build (Native Platform)
 
-### Running the Contributor Node
-
-- **Default Ports (`TCP: 9000`, `Web: 9190`):**
-  ```bash
-  cargo run --bin contributor
-  ```
-- **Custom TCP & Web Ports (e.g. `TCP: 9001`, `Web: 9191`):**
-  ```bash
-  cargo run --bin contributor -- 9001 9191
-  ```
-- **Release Mode:**
-  ```bash
-  cargo run --release --bin contributor
-  ```
-
----
-
-## 📦 5. Building Standalone Binaries
-
-Compile standalone release binaries using Cargo:
+Compile optimized release binaries for your current operating system:
 
 ```bash
 cargo build --release --bins
 ```
 
-The compiled binaries will be available in:
-
+The output binaries will be generated in `target/release/`:
 - **Windows:** `target\release\organizer.exe` and `target\release\contributor.exe`
 - **Linux:** `target/release/organizer` and `target/release/contributor`
 - **macOS:** `target/release/organizer` and `target/release/contributor`
 
-### Building Universal Binaries for macOS (Intel + Apple Silicon)
+---
 
-```bash
-rustup target add x86_64-apple-darwin aarch64-apple-darwin
-cargo build --release --target x86_64-apple-darwin --bins
-cargo build --release --target aarch64-apple-darwin --bins
+### Platform-Specific & Cross-Platform Builds
 
-# Combine into Universal Binaries
-lipo -create -output target/release/organizer \
-  target/x86_64-apple-darwin/release/organizer \
-  target/aarch64-apple-darwin/release/organizer
+#### 🪟 Windows Build
+```powershell
+# Native build in PowerShell or CMD
+cargo build --release --bins
 
-lipo -create -output target/release/contributor \
-  target/x86_64-apple-darwin/release/contributor \
-  target/aarch64-apple-darwin/release/contributor
+# Package portable release zip / folder layout
+.\package_release.ps1
 ```
+
+#### 🐧 Linux Build
+
+- **Native Linux Build:**
+  ```bash
+  cargo build --release --bins
+  ```
+
+- **Static Linux Binary Build (Docker / musl):**
+  Generate zero-dependency, statically-linked binaries suitable for any Linux distro (including minimal/Alpine hosts):
+  ```bash
+  docker build -t ram-connect-linux -f Dockerfile .
+  docker run --rm -v $(pwd)/dist/linux:/output ram-connect-linux
+  ```
+
+- **Linux Release Packaging:**
+  ```bash
+  chmod +x package_release.sh
+  ./package_release.sh
+  ```
+
+#### 🍏 macOS Build (Intel & Apple Silicon)
+
+- **Native Build (Current Architecture):**
+  ```bash
+  cargo build --release --bins
+  ```
+
+- **Universal macOS Binary (Apple Silicon ARM64 + Intel x86_64):**
+  To create a single binary set that runs natively on both M-series and Intel Macs:
+  ```bash
+  # 1. Add target toolchains
+  rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
+  # 2. Build for both architectures
+  cargo build --release --target x86_64-apple-darwin --bins
+  cargo build --release --target aarch64-apple-darwin --bins
+
+  # 3. Combine using lipo
+  lipo -create -output target/release/organizer \
+    target/x86_64-apple-darwin/release/organizer \
+    target/aarch64-apple-darwin/release/organizer
+
+  lipo -create -output target/release/contributor \
+    target/x86_64-apple-darwin/release/contributor \
+    target/aarch64-apple-darwin/release/contributor
+  ```
+
+---
+
+## 🚀 5. Getting Started & Running Nodes
+
+### 🪟 Windows
+
+1. **Launcher Scripts:** Double-click `dist\windows\Start-Organizer.bat` or `dist\windows\Start-Contributor.bat`.
+2. **Command Line:**
+   ```cmd
+   # Run Organizer on default port (8080)
+   target\release\organizer.exe
+
+   # Run Contributor on default TCP (9000) & Web (9190)
+   target\release\contributor.exe
+   ```
+3. **Mounting Storage:** Access `http://127.0.0.1:8080` in your browser and click **Auto-Mount Mesh**. Ensure the Windows `WebClient` service is active (`net start WebClient`).
+
+### 🐧 Linux
+
+1. **Launcher Scripts:**
+   ```bash
+   cd dist/linux
+   chmod +x Start-Organizer.sh Start-Contributor.sh organizer contributor
+   ./Start-Organizer.sh
+   # On donor machine:
+   ./Start-Contributor.sh
+   ```
+2. **Command Line:**
+   ```bash
+   ./target/release/organizer 8080
+   ./target/release/contributor 9000 9190
+   ```
+3. **Mounting Swap:** Use `sudo` privileges when prompted by the Organizer to mount `tmpfs` at `/mnt/ramconnect` or create `/var/ramconnect/ram_swap.img` with `swapon`.
+
+### 🍏 macOS
+
+1. **Launcher Scripts:** Double-click `dist/macos/Start-Organizer.command` or `dist/macos/Start-Contributor.command` in Finder.
+2. **Terminal:**
+   ```bash
+   chmod +x target/release/organizer target/release/contributor
+   ./target/release/organizer 8080
+   ./target/release/contributor 9000 9190
+   ```
+3. **Mounting Drive:** In the web UI (`http://127.0.0.1:8080`), click **Auto-Mount Mesh as Physical System Drive**, or open `webdav://127.0.0.1:8080/dav` in Finder to mount under `/Volumes/RAMConnect`.
+
+---
+
+## ❓ 6. Troubleshooting & FAQs
+
+### 🌐 Network & Discovery Issues
+
+- **Nodes not discovering each other automatically:**
+  - Verify both machines are on the same local subnet / LAN.
+  - Ensure Multicast DNS (mDNS) port `UDP 5353` is allowed by your firewall.
+  - If mDNS is blocked by your router/AP, manually specify the Contributor IP address in the Organizer Web Dashboard.
+- **Connection Refused or Firewall Blocks:**
+  - Check that TCP ports `8080` (Organizer Web), `9000` (Contributor Payload), and `9190` (Contributor Web) are open in host firewalls (`ufw allow 8080/tcp`, Windows Firewall inbound rules, macOS Security Settings).
+
+### 🪟 Windows WebDAV / Mount Troubleshooting
+
+- **Error: "The network path was not found" or WebDAV cannot mount `R:\`:**
+  - The Windows WebClient service might be stopped. Start it by running CMD/PowerShell as Administrator:
+    ```cmd
+    net start WebClient
+    ```
+  - Set WebClient to automatic start:
+    ```cmd
+    sc config WebClient start= auto
+    ```
+- **WebDAV file size transfer limits:**
+  - Windows defaults to a 50MB file size limit for WebDAV streams. If transferring large virtual swap files over WebDAV, increase `FileSizeLimitInBytes` under `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters` in Regedit.
+
+### 🐧 Linux Mount & Permission Errors
+
+- **`Permission denied` when mounting `/mnt/ramconnect` or creating swap:**
+  - Mounting `tmpfs` and enabling swap via `swapon` requires `root` / `sudo` privileges. Run the Organizer binary or script with `sudo` if auto-mount fails.
+- **`swapon: /var/ramconnect/ram_swap.img: read swap header failed`:**
+  - Ensure the swap image was properly formatted with `mkswap` before `swapon`. Delete the corrupt file and let RamConnect re-initialize the pool:
+    ```bash
+    sudo swapoff /var/ramconnect/ram_swap.img 2>/dev/null
+    sudo rm -f /var/ramconnect/ram_swap.img
+    ```
+
+### 🍏 macOS Execution & Finder Mount Issues
+
+- **macOS Security Warning: `"organizer" cannot be opened because it is from an unidentified developer`:**
+  - Open **System Settings > Privacy & Security** and click **Allow Anyway**, or remove the quarantine attribute via Terminal:
+    ```bash
+    xattr -d com.apple.quarantine target/release/organizer target/release/contributor
+    ```
+- **Finder WebDAV fails to mount `/Volumes/RAMConnect`:**
+  - Check if port 8080 (or configured Web port) is in use by another app.
+  - Test mounting manually from Finder: Press `Cmd + K`, enter `http://127.0.0.1:8080/dav` (or `webdav://127.0.0.1:8080/dav`), and connect as **Guest**.
 
 ---
 
@@ -187,3 +293,4 @@ of this license document, but changing it is not allowed.
 ```
 
 For full details, see the [LICENSE](LICENSE) file in the repository root.
+
