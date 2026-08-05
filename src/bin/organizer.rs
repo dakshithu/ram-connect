@@ -235,9 +235,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = tokio::signal::ctrl_c().await;
         #[cfg(target_os = "macos")]
         {
-            println!("\n[SHUTDOWN] Unmounting RAM Drive from /Volumes/RAMConnect...");
+            let mount_path = get_system_mount_path();
+            let mount_str = mount_path.to_string_lossy().to_string();
+            println!("\n[SHUTDOWN] Unmounting RAM Drive from {}...", mount_str);
+            let _ = std::process::Command::new("umount").args(["-f", &mount_str]).output();
+            let _ = std::process::Command::new("diskutil").args(["unmount", "force", &mount_str]).output();
             let _ = std::process::Command::new("umount").args(["-f", "/Volumes/RAMConnect"]).output();
             let _ = std::process::Command::new("diskutil").args(["unmount", "force", "/Volumes/RAMConnect"]).output();
+            let _ = std::process::Command::new("diskutil").args(["unmount", "force", "/Volumes/127.0.0.1"]).output();
         }
         if *state_sig.is_swap_active.lock().unwrap() {
             #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -721,7 +726,11 @@ fn get_system_mount_path() -> PathBuf {
     }
     #[cfg(target_os = "macos")]
     {
-        PathBuf::from("/Volumes/RAMConnect")
+        if let Ok(home) = std::env::var("HOME") {
+            PathBuf::from(home).join("RAMConnect_Drive")
+        } else {
+            PathBuf::from("/tmp/ramconnect")
+        }
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
@@ -828,31 +837,33 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_http_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_webdav_url = format!("webdav://127.0.0.1:{}/dav", web_port);
         let _ = std::fs::create_dir_all(&mount_path);
+        let mount_str = mount_path.to_string_lossy().to_string();
 
         let mount_res = std::process::Command::new("mount_webdav")
-            .args(["-v", "RAMConnect", &dav_url, "/Volumes/RAMConnect"])
+            .args(["-v", "RAMConnect", &dav_http_url, &mount_str])
             .output();
 
         if let Ok(o) = mount_res {
             if o.status.success() {
-                let _ = std::process::Command::new("open").arg("/Volumes/RAMConnect").spawn();
-                return format!("⚡ Physical RAM Drive mounted at /Volumes/RAMConnect ({})!", dav_url);
+                let _ = std::process::Command::new("open").arg(&mount_str).spawn();
+                return format!("⚡ Physical RAM Drive mounted at {}!", mount_str);
             }
         }
 
         let osa_res = std::process::Command::new("osascript")
-            .args(["-e", &format!("mount volume \"{}\"", dav_url)])
+            .args(["-e", &format!("mount volume \"{}\"", dav_webdav_url)])
             .output();
 
         if let Ok(o) = osa_res {
             if o.status.success() {
-                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
+                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_webdav_url);
             }
         }
 
-        format!("⚡ WebDAV Mount endpoint ready at {}", dav_url)
+        format!("⚡ WebDAV Mount endpoint ready at {}", dav_http_url)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
