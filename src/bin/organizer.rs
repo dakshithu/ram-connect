@@ -845,7 +845,6 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
         };
 
         let dav_url = format!("http://{}:{}/dav", host_ip, web_port);
-        let finder_url = format!("x-finder-connect://{}:{}/dav", host_ip, web_port);
 
         let osa_res = std::process::Command::new("osascript")
             .arg("-e")
@@ -858,7 +857,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
             }
         }
 
-        let _ = std::process::Command::new("open").arg(&finder_url).spawn();
+        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
         format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
     }
 
