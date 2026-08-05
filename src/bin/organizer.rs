@@ -837,7 +837,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_http_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_http_url = format!("http://guest:guest@127.0.0.1:{}/dav", web_port);
         let _ = std::fs::create_dir_all(&mount_path);
         let mount_str = mount_path.to_string_lossy().to_string();
 
