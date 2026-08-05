@@ -839,6 +839,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     {
         let web_port = state.web_port;
         let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let finder_url = format!("x-finder-connect://127.0.0.1:{}/dav", web_port);
 
         let osa_res = std::process::Command::new("osascript")
             .arg("-e")
@@ -851,7 +852,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
             }
         }
 
-        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+        let _ = std::process::Command::new("open").arg(&finder_url).spawn();
         format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
     }
 
@@ -863,7 +864,9 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
 }
 
 async fn mount_system_drive(State(state): State<OrganizerState>) -> impl IntoResponse {
-    let msg = auto_mount_system_drive(&state);
+    let msg = tokio::task::spawn_blocking(move || {
+        auto_mount_system_drive(&state)
+    }).await.unwrap_or_else(|_| "Mount triggered.".to_string());
     let mount_path = get_system_mount_path();
     Json(serde_json::json!({
         "success": true,
