@@ -254,13 +254,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(0);
     });
 
-    let state_auto = state.clone();
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-        let msg = auto_mount_system_drive(&state_auto);
-        println!("   - Host OS RAM Integration: {}", msg);
-    });
-
     let addr = SocketAddr::from(([0, 0, 0, 0], web_port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
