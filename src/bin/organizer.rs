@@ -219,7 +219,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let app = Router::new()
-        .route("/", get(serve_dashboard_html))
+        .route("/", axum::routing::any(handle_root))
         .route("/api/status", get(get_status))
         .route("/api/register-node", post(register_node))
         .route("/api/unregister-node", post(unregister_node))
@@ -1548,6 +1548,20 @@ async fn run_benchmark(State(state): State<OrganizerState>) -> impl IntoResponse
         results,
         message: "Benchmark complete!".to_string(),
     })
+}
+
+async fn handle_root(
+    State(state): State<OrganizerState>,
+    req: axum::extract::Request,
+) -> impl IntoResponse {
+    let method = req.method().clone();
+    if method == axum::http::Method::GET {
+        let accept = req.headers().get("accept").and_then(|h| h.to_str().ok()).unwrap_or("");
+        if accept.contains("text/html") || accept.is_empty() {
+            return serve_dashboard_html(State(state)).await.into_response();
+        }
+    }
+    handle_webdav(State(state), req).await.into_response()
 }
 
 async fn serve_dashboard_html(State(state): State<OrganizerState>) -> Html<String> {
