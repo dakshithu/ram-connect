@@ -838,8 +838,14 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
-        let finder_url = format!("x-finder-connect://127.0.0.1:{}/dav", web_port);
+        let host_ip = if state.lan_ip.is_empty() || state.lan_ip == "0.0.0.0" {
+            "127.0.0.1".to_string()
+        } else {
+            state.lan_ip.clone()
+        };
+
+        let dav_url = format!("http://{}:{}/dav", host_ip, web_port);
+        let finder_url = format!("x-finder-connect://{}:{}/dav", host_ip, web_port);
 
         let osa_res = std::process::Command::new("osascript")
             .arg("-e")
@@ -1025,6 +1031,8 @@ async fn handle_webdav(
                     xml.push_str(&format!("        <D:displayname>{}</D:displayname>\n", f.name));
                     xml.push_str(&format!("        <D:getcontentlength>{}</D:getcontentlength>\n", f.size_bytes));
                     xml.push_str(&format!("        <D:getcontenttype>{}</D:getcontenttype>\n", guess_mime(&f.name)));
+                    xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
+                    xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
                     xml.push_str("      </D:prop>\n");
                     xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
                     xml.push_str("    </D:propstat>\n");
@@ -1049,6 +1057,8 @@ async fn handle_webdav(
             xml.push_str("      <D:prop>\n");
             xml.push_str("        <D:resourcetype><D:collection/></D:resourcetype>\n");
             xml.push_str("        <D:displayname>RAM Connect Mesh Drive</D:displayname>\n");
+            xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
+            xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
             xml.push_str("      </D:prop>\n");
             xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
             xml.push_str("    </D:propstat>\n");
@@ -1064,6 +1074,8 @@ async fn handle_webdav(
                     xml.push_str(&format!("        <D:displayname>{}</D:displayname>\n", f.name));
                     xml.push_str(&format!("        <D:getcontentlength>{}</D:getcontentlength>\n", f.size_bytes));
                     xml.push_str(&format!("        <D:getcontenttype>{}</D:getcontenttype>\n", guess_mime(&f.name)));
+                    xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
+                    xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
                     xml.push_str("      </D:prop>\n");
                     xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
                     xml.push_str("    </D:propstat>\n");
