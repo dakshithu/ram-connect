@@ -1254,7 +1254,6 @@ async fn handle_local_mount(Json(payload): Json<LocalMountReq>) -> impl IntoResp
     #[cfg(target_os = "macos")]
     {
         let dav_http_url = format!("http://{}:{}/dav", server_ip, web_port);
-        let dav_webdav_url = format!("webdav://{}:{}/dav", server_ip, web_port);
         let mount_path = if let Ok(home) = std::env::var("HOME") {
             std::path::PathBuf::from(home).join("RAMConnect_Drive")
         } else {
@@ -1264,10 +1263,10 @@ async fn handle_local_mount(Json(payload): Json<LocalMountReq>) -> impl IntoResp
         let mount_str = mount_path.to_string_lossy().to_string();
 
         let _ = std::process::Command::new("mount_webdav")
-            .args(["-v", "RAMConnect", &dav_http_url, &mount_str])
+            .args(["-i", &dav_http_url, &mount_str])
             .output();
         let _ = std::process::Command::new("osascript")
-            .args(["-e", &format!("mount volume \"{}\"", dav_webdav_url)])
+            .args(["-e", &format!("mount volume \"{}\"", dav_http_url)])
             .output();
         let _ = std::process::Command::new("open").arg(&mount_str).spawn();
         Json(serde_json::json!({ "success": true, "message": format!("⚡ Physical RAM Drive mounted at {}!", mount_str) }))

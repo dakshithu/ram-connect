@@ -838,12 +838,11 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     {
         let web_port = state.web_port;
         let dav_http_url = format!("http://127.0.0.1:{}/dav", web_port);
-        let dav_webdav_url = format!("webdav://127.0.0.1:{}/dav", web_port);
         let _ = std::fs::create_dir_all(&mount_path);
         let mount_str = mount_path.to_string_lossy().to_string();
 
         let mount_res = std::process::Command::new("mount_webdav")
-            .args(["-v", "RAMConnect", &dav_http_url, &mount_str])
+            .args(["-i", &dav_http_url, &mount_str])
             .output();
 
         if let Ok(o) = mount_res {
@@ -854,12 +853,12 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
         }
 
         let osa_res = std::process::Command::new("osascript")
-            .args(["-e", &format!("mount volume \"{}\"", dav_webdav_url)])
+            .args(["-e", &format!("mount volume \"{}\"", dav_http_url)])
             .output();
 
         if let Ok(o) = osa_res {
             if o.status.success() {
-                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_webdav_url);
+                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_http_url);
             }
         }
 
