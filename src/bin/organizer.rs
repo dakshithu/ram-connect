@@ -1006,18 +1006,26 @@ async fn handle_webdav(
             headers.insert("DAV", "1, 2".parse().unwrap());
             headers.insert("Allow", "OPTIONS, GET, HEAD, POST, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, COPY, MOVE, LOCK, UNLOCK".parse().unwrap());
             headers.insert("MS-Author-Via", "DAV".parse().unwrap());
+            headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
             (StatusCode::OK, headers, "").into_response()
         }
         "PROPFIND" => {
             let depth = req.headers().get("depth").and_then(|h| h.to_str().ok()).unwrap_or("1");
             let files = state.files.lock().unwrap();
 
+            let base_dav_prefix = if uri_path.ends_with('/') {
+                uri_path.clone()
+            } else {
+                format!("{}/", uri_path)
+            };
+
             if !filename.is_empty() {
                 let mesh_file = files.values().find(|f| f.name == filename || f.id == filename);
                 if let Some(f) = mesh_file {
+                    let file_href = format!("{}{}", base_dav_prefix, urlencoding(&f.name));
                     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
                     xml.push_str("  <D:response>\n");
-                    xml.push_str(&format!("    <D:href>/dav/{}</D:href>\n", urlencoding(&f.name)));
+                    xml.push_str(&format!("    <D:href>{}</D:href>\n", file_href));
                     xml.push_str("    <D:propstat>\n");
                     xml.push_str("      <D:prop>\n");
                     xml.push_str("        <D:resourcetype/>\n");
@@ -1036,16 +1044,23 @@ async fn handle_webdav(
                     headers.insert(header::CONTENT_TYPE, "application/xml; charset=utf-8".parse().unwrap());
                     headers.insert("DAV", "1, 2".parse().unwrap());
                     headers.insert("MS-Author-Via", "DAV".parse().unwrap());
+                    headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
                     return (StatusCode::MULTI_STATUS, headers, xml).into_response();
                 } else {
                     return (StatusCode::NOT_FOUND, "File not found").into_response();
                 }
             }
 
+            let self_href = if uri_path.is_empty() {
+                "/dav/".to_string()
+            } else {
+                uri_path.clone()
+            };
+
             let mut xml = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
             
             xml.push_str("  <D:response>\n");
-            xml.push_str("    <D:href>/dav/</D:href>\n");
+            xml.push_str(&format!("    <D:href>{}</D:href>\n", self_href));
             xml.push_str("    <D:propstat>\n");
             xml.push_str("      <D:prop>\n");
             xml.push_str("        <D:resourcetype><D:collection/></D:resourcetype>\n");
@@ -1059,8 +1074,9 @@ async fn handle_webdav(
 
             if depth != "0" {
                 for f in files.values() {
+                    let item_href = format!("{}{}", base_dav_prefix, urlencoding(&f.name));
                     xml.push_str("  <D:response>\n");
-                    xml.push_str(&format!("    <D:href>/dav/{}</D:href>\n", urlencoding(&f.name)));
+                    xml.push_str(&format!("    <D:href>{}</D:href>\n", item_href));
                     xml.push_str("    <D:propstat>\n");
                     xml.push_str("      <D:prop>\n");
                     xml.push_str("        <D:resourcetype/>\n");
@@ -1081,6 +1097,7 @@ async fn handle_webdav(
             headers.insert(header::CONTENT_TYPE, "application/xml; charset=utf-8".parse().unwrap());
             headers.insert("DAV", "1, 2".parse().unwrap());
             headers.insert("MS-Author-Via", "DAV".parse().unwrap());
+            headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
             (StatusCode::MULTI_STATUS, headers, xml).into_response()
         }
         "GET" | "HEAD" => {
