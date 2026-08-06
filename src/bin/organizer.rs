@@ -838,21 +838,39 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let http_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let mount_point = "/Volumes/RAMConnect";
+
+        let _ = std::process::Command::new("diskutil").args(["unmount", "force", mount_point]).output();
+        let _ = std::fs::create_dir_all(mount_point);
+
+        let mount_res = std::process::Command::new("mount_webdav")
+            .stdin(std::process::Stdio::null())
+            .args(["-i", "-v", "RAMConnect", &http_url, mount_point])
+            .output();
+
+        if let Ok(o) = mount_res {
+            if o.status.success() {
+                let _ = std::process::Command::new("open").arg(mount_point).spawn();
+                return format!("⚡ Physical RAM Drive automatically mounted at {}!", mount_point);
+            }
+        }
 
         let osa_res = std::process::Command::new("osascript")
+            .stdin(std::process::Stdio::null())
             .arg("-e")
-            .arg(format!("mount volume \"{}\"", dav_url))
+            .arg(format!("mount volume \"{}\"", http_url))
             .output();
 
         if let Ok(o) = osa_res {
             if o.status.success() {
-                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
+                let _ = std::process::Command::new("open").arg(mount_point).spawn();
+                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", http_url);
             }
         }
 
-        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
-        format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
+        let _ = std::process::Command::new("open").arg(&http_url).spawn();
+        format!("⚡ Opened WebDAV Connection at {}!", http_url)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -907,12 +925,30 @@ async fn handle_local_mount_org(Json(payload): Json<LocalMountOrgReq>) -> impl I
 
     #[cfg(target_os = "macos")]
     {
-        let dav_url = format!("http://{}:{}/dav", server_ip, web_port);
-        let _ = std::fs::create_dir_all("/Volumes/RAMConnect");
-        let _ = std::process::Command::new("mount_webdav")
-            .args(["-v", "RAMConnect", &dav_url, "/Volumes/RAMConnect"])
+        let http_url = format!("http://{}:{}/dav", server_ip, web_port);
+        let mount_point = "/Volumes/RAMConnect";
+
+        let _ = std::process::Command::new("diskutil").args(["unmount", "force", mount_point]).output();
+        let _ = std::fs::create_dir_all(mount_point);
+
+        let mount_res = std::process::Command::new("mount_webdav")
+            .stdin(std::process::Stdio::null())
+            .args(["-i", "-v", "RAMConnect", &http_url, mount_point])
             .output();
-        let _ = std::process::Command::new("open").arg("/Volumes/RAMConnect").spawn();
+
+        if let Ok(o) = mount_res {
+            if o.status.success() {
+                let _ = std::process::Command::new("open").arg(mount_point).spawn();
+                return Json(serde_json::json!({ "success": true, "message": "⚡ Physical RAM Drive mounted at /Volumes/RAMConnect!" }));
+            }
+        }
+
+        let _ = std::process::Command::new("osascript")
+            .stdin(std::process::Stdio::null())
+            .arg("-e")
+            .arg(format!("mount volume \"{}\"", http_url))
+            .output();
+        let _ = std::process::Command::new("open").arg(&http_url).spawn();
         Json(serde_json::json!({ "success": true, "message": "⚡ Physical RAM Drive mounted at /Volumes/RAMConnect!" }))
     }
 
@@ -1924,7 +1960,7 @@ async fn serve_dashboard_html(State(state): State<OrganizerState>) -> Html<Strin
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">macOS Finder Mount</div>
-                    <div style="font-family: monospace; font-size: 0.85rem; color: #a855f7; margin-top: 0.25rem;">open http://{1}:{2}/dav</div>
+                    <div style="font-family: monospace; font-size: 0.85rem; color: #a855f7; margin-top: 0.25rem;">open webdav://{1}:{2}/dav</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Mounts in Finder as /Volumes/RAMConnect</div>
                 </div>
                 <div>

@@ -1253,13 +1253,31 @@ async fn handle_local_mount(Json(payload): Json<LocalMountReq>) -> impl IntoResp
 
     #[cfg(target_os = "macos")]
     {
-        let dav_http_url = format!("http://{}:{}/dav", server_ip, web_port);
-        let _ = std::process::Command::new("osascript")
-            .arg("-e")
-            .arg(format!("mount volume \"{}\"", dav_http_url))
+        let http_url = format!("http://{}:{}/dav", server_ip, web_port);
+        let mount_point = "/Volumes/RAMConnect";
+
+        let _ = std::process::Command::new("diskutil").args(["unmount", "force", mount_point]).output();
+        let _ = std::fs::create_dir_all(mount_point);
+
+        let mount_res = std::process::Command::new("mount_webdav")
+            .stdin(std::process::Stdio::null())
+            .args(["-i", "-v", "RAMConnect", &http_url, mount_point])
             .output();
-        let _ = std::process::Command::new("open").arg(&dav_http_url).spawn();
-        Json(serde_json::json!({ "success": true, "message": format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_http_url) }))
+
+        if let Ok(o) = mount_res {
+            if o.status.success() {
+                let _ = std::process::Command::new("open").arg(mount_point).spawn();
+                return Json(serde_json::json!({ "success": true, "message": format!("⚡ Physical RAM Drive automatically mounted at {}!", mount_point) }));
+            }
+        }
+
+        let _ = std::process::Command::new("osascript")
+            .stdin(std::process::Stdio::null())
+            .arg("-e")
+            .arg(format!("mount volume \"{}\"", http_url))
+            .output();
+        let _ = std::process::Command::new("open").arg(&http_url).spawn();
+        Json(serde_json::json!({ "success": true, "message": format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", http_url) }))
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
