@@ -1013,6 +1013,11 @@ async fn handle_webdav(
             let depth = req.headers().get("depth").and_then(|h| h.to_str().ok()).unwrap_or("1");
             let files = state.files.lock().unwrap();
 
+            let total_ram_mb = get_total_contributor_ram_mb(&state);
+            let total_bytes = if total_ram_mb > 0 { (total_ram_mb * 1024 * 1024) as u64 } else { 1073741824u64 };
+            let used_bytes = files.values().map(|f| f.size_bytes as u64).sum::<u64>();
+            let avail_bytes = total_bytes.saturating_sub(used_bytes);
+
             let base_dav_prefix = if uri_path.ends_with('/') {
                 uri_path.clone()
             } else {
@@ -1041,7 +1046,7 @@ async fn handle_webdav(
                     xml.push_str("</D:multistatus>");
 
                     let mut headers = HeaderMap::new();
-                    headers.insert(header::CONTENT_TYPE, "application/xml; charset=utf-8".parse().unwrap());
+                    headers.insert(header::CONTENT_TYPE, "text/xml; charset=utf-8".parse().unwrap());
                     headers.insert("DAV", "1, 2".parse().unwrap());
                     headers.insert("MS-Author-Via", "DAV".parse().unwrap());
                     headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
@@ -1065,6 +1070,8 @@ async fn handle_webdav(
             xml.push_str("      <D:prop>\n");
             xml.push_str("        <D:resourcetype><D:collection/></D:resourcetype>\n");
             xml.push_str("        <D:displayname>RAM Connect Mesh Drive</D:displayname>\n");
+            xml.push_str(&format!("        <D:quota-available-bytes>{}</D:quota-available-bytes>\n", avail_bytes));
+            xml.push_str(&format!("        <D:quota-used-bytes>{}</D:quota-used-bytes>\n", used_bytes));
             xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
             xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
             xml.push_str("      </D:prop>\n");
@@ -1094,7 +1101,7 @@ async fn handle_webdav(
             xml.push_str("</D:multistatus>");
 
             let mut headers = HeaderMap::new();
-            headers.insert(header::CONTENT_TYPE, "application/xml; charset=utf-8".parse().unwrap());
+            headers.insert(header::CONTENT_TYPE, "text/xml; charset=utf-8".parse().unwrap());
             headers.insert("DAV", "1, 2".parse().unwrap());
             headers.insert("MS-Author-Via", "DAV".parse().unwrap());
             headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
