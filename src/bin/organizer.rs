@@ -838,21 +838,21 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let http_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_url = format!("http://ram:ram@127.0.0.1:{}/dav", web_port);
 
         let osa_res = std::process::Command::new("osascript")
             .arg("-e")
-            .arg(format!("mount volume \"{}\"", http_url))
+            .arg(format!("mount volume \"{}\"", dav_url))
             .output();
 
         if let Ok(o) = osa_res {
             if o.status.success() {
-                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", http_url);
+                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
             }
         }
 
-        let _ = std::process::Command::new("open").arg(&http_url).spawn();
-        format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", http_url)
+        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+        format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -907,13 +907,13 @@ async fn handle_local_mount_org(Json(payload): Json<LocalMountOrgReq>) -> impl I
 
     #[cfg(target_os = "macos")]
     {
-        let http_url = format!("http://{}:{}/dav", server_ip, web_port);
+        let dav_url = format!("http://ram:ram@{}:{}/dav", server_ip, web_port);
         let _ = std::process::Command::new("osascript")
             .arg("-e")
-            .arg(format!("mount volume \"{}\"", http_url))
+            .arg(format!("mount volume \"{}\"", dav_url))
             .output();
-        let _ = std::process::Command::new("open").arg(&http_url).spawn();
-        Json(serde_json::json!({ "success": true, "message": format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", http_url) }))
+        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+        Json(serde_json::json!({ "success": true, "message": format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url) }))
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
