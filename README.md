@@ -38,8 +38,6 @@ RamConnect lets one device (the **Contributor**) share a portion of its RAM over
 ![Stars](https://img.shields.io/github/stars/dakshithu/ram-connect?style=social)
 ![Forks](https://img.shields.io/github/forks/dakshithu/ram-connect?style=social)
 
-> **Note on view tracking:** GitHub doesn't expose a public, lifetime view count for any repo — its native **Insights → Traffic** page only shows the last 14 days, and only to repo owners/collaborators. The counter above is a free, self-hosted badge ([komarev.com/ghpvc](https://github.com/antonkomarev/github-profile-views-counter)) that increments every time this README is loaded and persists indefinitely, so it counts every view going forward from the moment you add it. There's no way to backfill views from before it's added — GitHub never stored that data publicly to begin with, so "from the start" is only possible if the badge is in place before people start visiting.
-
 ---
 
 ## 🌐 1. General & Hardware Requirements
