@@ -838,13 +838,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let host_ip = if state.lan_ip.is_empty() || state.lan_ip == "0.0.0.0" {
-            "127.0.0.1".to_string()
-        } else {
-            state.lan_ip.clone()
-        };
-
-        let dav_url = format!("http://{}:{}/dav", host_ip, web_port);
+        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
 
         let osa_res = std::process::Command::new("osascript")
             .arg("-e")
