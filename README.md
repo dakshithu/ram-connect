@@ -10,6 +10,7 @@ Pool memory across your devices over the LAN — Windows, Linux, and macOS.
 ![Architecture](https://img.shields.io/badge/arch-x86__64%20%7C%20ARM64-lightgrey)
 ![License](https://img.shields.io/badge/license-AGPLv3-orange)
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
+![Views](https://komarev.com/ghpvc/?username=YOUR_USERNAME&repo=RamConnect&color=blue&label=Repo+Views)
 
 </div>
 
@@ -28,6 +29,18 @@ RamConnect lets one device (the **Contributor**) share a portion of its RAM over
 - 🖥️ Web dashboard for monitoring nodes
 - 🔌 Simple Organizer / Contributor node model
 - 🛠️ Native swap and drive integration (`tmpfs` on Linux, WebDAV on Windows/macOS)
+
+---
+
+## 📊 Repo Stats
+
+![Views](https://komarev.com/ghpvc/?username=YOUR_USERNAME&repo=RamConnect&color=blue&label=Total+Views)
+![Stars](https://img.shields.io/github/stars/YOUR_USERNAME/RamConnect?style=social)
+![Forks](https://img.shields.io/github/forks/YOUR_USERNAME/RamConnect?style=social)
+
+> **Note on view tracking:** GitHub doesn't expose a public, lifetime view count for any repo — its native **Insights → Traffic** page only shows the last 14 days, and only to repo owners/collaborators. The counter above is a free, self-hosted badge ([komarev.com/ghpvc](https://github.com/antonkomarev/github-profile-views-counter)) that increments every time this README is loaded and persists indefinitely, so it counts every view going forward from the moment you add it. There's no way to backfill views from before it's added — GitHub never stored that data publicly to begin with, so "from the start" is only possible if the badge is in place before people start visiting.
+
+Replace `YOUR_USERNAME` above with your actual GitHub username once you add this.
 
 ---
 
@@ -293,4 +306,3 @@ of this license document, but changing it is not allowed.
 ```
 
 For full details, see the [LICENSE](LICENSE) file in the repository root.
-
