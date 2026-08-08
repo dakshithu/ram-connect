@@ -839,18 +839,39 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     {
         let web_port = state.web_port;
         let dav_url = format!("http://ram:ram@127.0.0.1:{}/dav", web_port);
+        println!("🚀 [AUTO MOUNT macOS] Preparing mount via osascript with URL: {}", dav_url);
 
+        println!("⚙️ [AUTO MOUNT macOS] Executing: osascript -e 'mount volume \"{}\"'", dav_url);
         let osa_res = std::process::Command::new("osascript")
             .arg("-e")
             .arg(format!("mount volume \"{}\"", dav_url))
             .output();
 
-        if let Ok(o) = osa_res {
-            if o.status.success() {
-                return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
+        match osa_res {
+            Ok(o) => {
+                let stdout_str = String::from_utf8_lossy(&o.stdout);
+                let stderr_str = String::from_utf8_lossy(&o.stderr);
+                println!("📋 [AUTO MOUNT macOS osascript] Exit Code: {:?}", o.status.code());
+                if !stdout_str.trim().is_empty() {
+                    println!("📋 [AUTO MOUNT macOS osascript STDOUT] {}", stdout_str.trim());
+                }
+                if !stderr_str.trim().is_empty() {
+                    println!("⚠️ [AUTO MOUNT macOS osascript STDERR] {}", stderr_str.trim());
+                }
+
+                if o.status.success() {
+                    println!("✅ [AUTO MOUNT macOS] osascript mount volume succeeded!");
+                    return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
+                } else {
+                    println!("❌ [AUTO MOUNT macOS] osascript failed with exit status {:?}", o.status);
+                }
+            }
+            Err(e) => {
+                println!("💥 [AUTO MOUNT macOS] Failed to execute osascript command: {}", e);
             }
         }
 
+        println!("⚙️ [AUTO MOUNT macOS Fallback] Executing open URL: open {}", dav_url);
         let _ = std::process::Command::new("open").arg(&dav_url).spawn();
         format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
     }
@@ -863,9 +884,11 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
 }
 
 async fn mount_system_drive(State(state): State<OrganizerState>) -> impl IntoResponse {
+    println!("🔘 [API ROUTE] Received POST /api/mount-system-drive request");
     let msg = tokio::task::spawn_blocking(move || {
         auto_mount_system_drive(&state)
     }).await.unwrap_or_else(|_| "Mount triggered.".to_string());
+    println!("🔘 [API ROUTE] Mount completion message: {}", msg);
     let mount_path = get_system_mount_path();
     Json(serde_json::json!({
         "success": true,
@@ -996,13 +1019,18 @@ async fn handle_webdav(
 ) -> impl IntoResponse {
     let method = req.method().clone();
     let uri_path = req.uri().path().to_string();
-    println!("📡 [WebDAV REQ] Method: {} | Path: {} | Depth: {:?}", method, uri_path, req.headers().get("depth"));
+    let auth = req.headers().get("authorization").and_then(|h| h.to_str().ok()).unwrap_or("<none>");
+    let user_agent = req.headers().get("user-agent").and_then(|h| h.to_str().ok()).unwrap_or("<none>");
+    let depth = req.headers().get("depth").and_then(|h| h.to_str().ok()).unwrap_or("<none>");
+
+    println!("📡 [WebDAV] Method: {} | Path: {} | Depth: {} | Auth: {} | UA: {}", method, uri_path, depth, auth, user_agent);
     
     let rel_path = uri_path.strip_prefix("/dav").unwrap_or(&uri_path);
     let filename = rel_path.trim_start_matches('/').to_string();
 
     match method.as_str() {
         "OPTIONS" => {
+            println!("📡 [WebDAV OPTIONS] Returning 200 OK with DAV header (1, 2)");
             let mut headers = HeaderMap::new();
             headers.insert("DAV", "1, 2".parse().unwrap());
             headers.insert("Allow", "OPTIONS, GET, HEAD, POST, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, COPY, MOVE, LOCK, UNLOCK".parse().unwrap());
@@ -1011,7 +1039,6 @@ async fn handle_webdav(
             (StatusCode::OK, headers, "").into_response()
         }
         "PROPFIND" => {
-            let depth = req.headers().get("depth").and_then(|h| h.to_str().ok()).unwrap_or("1");
             let files = state.files.lock().unwrap();
 
             let total_ram_mb = get_total_contributor_ram_mb(&state);
@@ -1029,6 +1056,7 @@ async fn handle_webdav(
                 let mesh_file = files.values().find(|f| f.name == filename || f.id == filename);
                 if let Some(f) = mesh_file {
                     let file_href = format!("{}{}", base_dav_prefix, urlencoding(&f.name));
+                    println!("📡 [WebDAV PROPFIND File] Found file: {} | Href: {}", f.name, file_href);
                     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
                     xml.push_str("  <D:response>\n");
                     xml.push_str(&format!("    <D:href>{}</D:href>\n", file_href));
@@ -1053,8 +1081,10 @@ async fn handle_webdav(
                     headers.insert("DAV", "1, 2".parse().unwrap());
                     headers.insert("MS-Author-Via", "DAV".parse().unwrap());
                     headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
+                    println!("📡 [WebDAV PROPFIND File] Returning 207 Multi-Status (XML length: {} bytes)", xml.len());
                     return (StatusCode::MULTI_STATUS, headers, xml).into_response();
                 } else {
+                    println!("⚠️ [WebDAV PROPFIND File] File not found: {}", filename);
                     return (StatusCode::NOT_FOUND, "File not found").into_response();
                 }
             }
@@ -1065,6 +1095,7 @@ async fn handle_webdav(
                 uri_path.clone()
             };
 
+            println!("📡 [WebDAV PROPFIND Root/Directory] Self Href: {} | Total files: {}", self_href, files.len());
             let mut xml = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
             
             xml.push_str("  <D:response>\n");
@@ -1112,6 +1143,7 @@ async fn handle_webdav(
             headers.insert("DAV", "1, 2".parse().unwrap());
             headers.insert("MS-Author-Via", "DAV".parse().unwrap());
             headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
+            println!("📡 [WebDAV PROPFIND Root] Returning 207 Multi-Status (XML length: {} bytes)", xml.len());
             (StatusCode::MULTI_STATUS, headers, xml).into_response()
         }
         "GET" | "HEAD" => {
@@ -1579,12 +1611,16 @@ async fn handle_root(
     req: axum::extract::Request,
 ) -> impl IntoResponse {
     let method = req.method().clone();
+    let accept = req.headers().get("accept").and_then(|h| h.to_str().ok()).unwrap_or("");
+    println!("🌐 [ROOT ROUTER] Method: {} | Accept: '{}'", method, accept);
+
     if method == axum::http::Method::GET {
-        let accept = req.headers().get("accept").and_then(|h| h.to_str().ok()).unwrap_or("");
         if accept.contains("text/html") || accept.is_empty() {
+            println!("🌐 [ROOT ROUTER] Serving Web Control Dashboard HTML");
             return serve_dashboard_html(State(state)).await.into_response();
         }
     }
+    println!("🌐 [ROOT ROUTER] Forwarding request to handle_webdav");
     handle_webdav(State(state), req).await.into_response()
 }
 
