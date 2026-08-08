@@ -1039,6 +1039,8 @@ async fn handle_webdav(
                     xml.push_str(&format!("        <D:getcontenttype>{}</D:getcontenttype>\n", guess_mime(&f.name)));
                     xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
                     xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
+                    xml.push_str("        <D:supportedlock><D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry></D:supportedlock>\n");
+                    xml.push_str("        <D:lockdiscovery/>\n");
                     xml.push_str("      </D:prop>\n");
                     xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
                     xml.push_str("    </D:propstat>\n");
@@ -1074,6 +1076,8 @@ async fn handle_webdav(
             xml.push_str(&format!("        <D:quota-used-bytes>{}</D:quota-used-bytes>\n", used_bytes));
             xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
             xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
+            xml.push_str("        <D:supportedlock><D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry></D:supportedlock>\n");
+            xml.push_str("        <D:lockdiscovery/>\n");
             xml.push_str("      </D:prop>\n");
             xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
             xml.push_str("    </D:propstat>\n");
@@ -1092,6 +1096,8 @@ async fn handle_webdav(
                     xml.push_str(&format!("        <D:getcontenttype>{}</D:getcontenttype>\n", guess_mime(&f.name)));
                     xml.push_str("        <D:getlastmodified>Wed, 05 Aug 2026 21:15:00 GMT</D:getlastmodified>\n");
                     xml.push_str("        <D:creationdate>2026-08-05T21:15:00Z</D:creationdate>\n");
+                    xml.push_str("        <D:supportedlock><D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry></D:supportedlock>\n");
+                    xml.push_str("        <D:lockdiscovery/>\n");
                     xml.push_str("      </D:prop>\n");
                     xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
                     xml.push_str("    </D:propstat>\n");
