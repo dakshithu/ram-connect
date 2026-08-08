@@ -1025,6 +1025,15 @@ async fn handle_webdav(
 
     println!("📡 [WebDAV] Method: {} | Path: {} | Depth: {} | Auth: {} | UA: {}", method, uri_path, depth, auth, user_agent);
     
+    // HTTP Basic Auth Challenge for non-OPTIONS requests
+    if method != "OPTIONS" && auth == "<none>" {
+        println!("🔐 [WebDAV AUTH] No Authorization header present. Returning 401 Unauthorized challenge.");
+        let mut headers = HeaderMap::new();
+        headers.insert("WWW-Authenticate", "Basic realm=\"RAMConnect\"".parse().unwrap());
+        headers.insert(header::SERVER, "RAMConnect-WebDAV/1.0".parse().unwrap());
+        return (StatusCode::UNAUTHORIZED, headers, "Authentication Required").into_response();
+    }
+    
     let rel_path = uri_path.strip_prefix("/dav").unwrap_or(&uri_path);
     let filename = rel_path.trim_start_matches('/').to_string();
 
