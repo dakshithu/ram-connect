@@ -996,6 +996,7 @@ async fn handle_webdav(
 ) -> impl IntoResponse {
     let method = req.method().clone();
     let uri_path = req.uri().path().to_string();
+    println!("📡 [WebDAV REQ] Method: {} | Path: {} | Depth: {:?}", method, uri_path, req.headers().get("depth"));
     
     let rel_path = uri_path.strip_prefix("/dav").unwrap_or(&uri_path);
     let filename = rel_path.trim_start_matches('/').to_string();
