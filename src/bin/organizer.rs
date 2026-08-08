@@ -838,7 +838,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_url = format!("http://ram:ram@127.0.0.1:{}/dav", web_port);
+        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
         println!("🚀 [AUTO MOUNT macOS] Preparing mount via osascript with URL: {}", dav_url);
 
         println!("⚙️ [AUTO MOUNT macOS] Executing: osascript -e 'mount volume \"{}\"'", dav_url);
