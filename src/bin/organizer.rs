@@ -839,41 +839,25 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     {
         let web_port = state.web_port;
         let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
-        println!("🚀 [AUTO MOUNT macOS] Preparing mount via osascript with URL: {}", dav_url);
+        println!("🚀 [AUTO MOUNT macOS] Spawning background osascript mount with URL: {}", dav_url);
 
-        println!("⚙️ [AUTO MOUNT macOS] Executing: osascript -e 'mount volume \"{}\"'", dav_url);
-        let osa_res = std::process::Command::new("osascript")
+        println!("⚙️ [AUTO MOUNT macOS] Spawning background process: osascript -e 'mount volume \"{}\"'", dav_url);
+        let spawn_res = std::process::Command::new("osascript")
             .arg("-e")
             .arg(format!("mount volume \"{}\"", dav_url))
-            .output();
+            .spawn();
 
-        match osa_res {
-            Ok(o) => {
-                let stdout_str = String::from_utf8_lossy(&o.stdout);
-                let stderr_str = String::from_utf8_lossy(&o.stderr);
-                println!("📋 [AUTO MOUNT macOS osascript] Exit Code: {:?}", o.status.code());
-                if !stdout_str.trim().is_empty() {
-                    println!("📋 [AUTO MOUNT macOS osascript STDOUT] {}", stdout_str.trim());
-                }
-                if !stderr_str.trim().is_empty() {
-                    println!("⚠️ [AUTO MOUNT macOS osascript STDERR] {}", stderr_str.trim());
-                }
-
-                if o.status.success() {
-                    println!("✅ [AUTO MOUNT macOS] osascript mount volume succeeded!");
-                    return format!("⚡ Physical RAM Drive mounted into macOS Finder from {}!", dav_url);
-                } else {
-                    println!("❌ [AUTO MOUNT macOS] osascript failed with exit status {:?}", o.status);
-                }
+        match spawn_res {
+            Ok(_) => {
+                println!("✅ [AUTO MOUNT macOS] osascript background process spawned successfully! Unblocking web server.");
+                format!("⚡ Physical RAM Drive mounting into macOS Finder from {}!", dav_url)
             }
             Err(e) => {
-                println!("💥 [AUTO MOUNT macOS] Failed to execute osascript command: {}", e);
+                println!("💥 [AUTO MOUNT macOS] Failed to spawn osascript: {}. Falling back to open...", e);
+                let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+                format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
             }
         }
-
-        println!("⚙️ [AUTO MOUNT macOS Fallback] Executing open URL: open {}", dav_url);
-        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
-        format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url)
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
