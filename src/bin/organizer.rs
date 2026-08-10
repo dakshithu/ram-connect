@@ -1082,10 +1082,12 @@ async fn handle_webdav(
                 }
             }
 
-            let self_href = if uri_path.is_empty() {
+            let self_href = if uri_path.is_empty() || uri_path == "/" {
                 "/dav/".to_string()
-            } else {
+            } else if uri_path.ends_with('/') {
                 uri_path.clone()
+            } else {
+                format!("{}/", uri_path)
             };
 
             println!("📡 [WebDAV PROPFIND Root/Directory] Self Href: {} | Total files: {}", self_href, files.len());
