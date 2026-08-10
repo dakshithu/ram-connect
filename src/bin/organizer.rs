@@ -838,7 +838,7 @@ fn auto_mount_system_drive(state: &OrganizerState) -> String {
     #[cfg(target_os = "macos")]
     {
         let web_port = state.web_port;
-        let dav_url = format!("http://127.0.0.1:{}/dav", web_port);
+        let dav_url = format!("http://127.0.0.1:{}/dav/", web_port);
         println!("🚀 [AUTO MOUNT macOS] Spawning background osascript mount with URL: {}", dav_url);
 
         println!("⚙️ [AUTO MOUNT macOS] Spawning background process: osascript -e 'mount volume \"{}\"'", dav_url);
@@ -914,12 +914,11 @@ async fn handle_local_mount_org(Json(payload): Json<LocalMountOrgReq>) -> impl I
 
     #[cfg(target_os = "macos")]
     {
-        let dav_url = format!("http://ram:ram@{}:{}/dav", server_ip, web_port);
+        let dav_url = format!("http://127.0.0.1:{}/dav/", web_port);
         let _ = std::process::Command::new("osascript")
             .arg("-e")
             .arg(format!("mount volume \"{}\"", dav_url))
-            .output();
-        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+            .spawn();
         Json(serde_json::json!({ "success": true, "message": format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url) }))
     }
 

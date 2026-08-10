@@ -1253,12 +1253,11 @@ async fn handle_local_mount(Json(payload): Json<LocalMountReq>) -> impl IntoResp
 
     #[cfg(target_os = "macos")]
     {
-        let dav_url = format!("http://ram:ram@{}:{}/dav", server_ip, web_port);
+        let dav_url = format!("http://{}:{}/dav/", server_ip, web_port);
         let _ = std::process::Command::new("osascript")
             .arg("-e")
             .arg(format!("mount volume \"{}\"", dav_url))
-            .output();
-        let _ = std::process::Command::new("open").arg(&dav_url).spawn();
+            .spawn();
         Json(serde_json::json!({ "success": true, "message": format!("⚡ Opened WebDAV Connection in macOS Finder at {}!", dav_url) }))
     }
 
